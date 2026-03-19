@@ -22,6 +22,10 @@ const envSchema = z.object({
   GITHUB_CALLBACK_URL: z.string().optional(),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_MODEL: z.string().default("llama3-70b-8192"),
+  GROQ_BASE_URL: z.string().default("https://api.groq.com/openai/v1"),
+  GROQ_MAX_TOKENS: z.coerce.number().int().positive().default(1400),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional()
 });
 

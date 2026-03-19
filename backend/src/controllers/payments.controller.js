@@ -8,8 +8,10 @@ import { User } from "../models/User.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 function getClient() {
-  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) return null;
-  return new Razorpay({ key_id: env.RAZORPAY_KEY_ID, key_secret: env.RAZORPAY_KEY_SECRET });
+  const keyId = (env.RAZORPAY_KEY_ID || "").trim();
+  const keySecret = (env.RAZORPAY_KEY_SECRET || "").trim();
+  if (!keyId || !keySecret) return null;
+  return new Razorpay({ key_id: keyId, key_secret: keySecret });
 }
 
 const createOrderSchema = z.object({
@@ -33,12 +35,19 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
   const { plan } = createOrderSchema.parse(req.body);
   const amount = planToAmount(plan);
 
-  const order = await client.orders.create({
-    amount,
-    currency: "INR",
-    receipt: `qp_${String(req.user._id)}_${Date.now()}`,
-    notes: { userId: String(req.user._id), plan }
-  });
+  let order;
+  try {
+    order = await client.orders.create({
+      amount,
+      currency: "INR",
+      receipt: `qp_${String(req.user._id)}_${Date.now()}`,
+      notes: { userId: String(req.user._id), plan }
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("Razorpay order create failed", err);
+    return res.status(502).json({ error: "RAZORPAY_ORDER_CREATE_FAILED" });
+  }
 
   await Payment.create({
     userId: req.user._id,
@@ -51,7 +60,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
   });
 
   res.json({
-    keyId: env.RAZORPAY_KEY_ID,
+    keyId: (env.RAZORPAY_KEY_ID || "").trim(),
     order: {
       id: order.id,
       amount: order.amount,
@@ -68,12 +77,13 @@ const verifySchema = z.object({
 });
 
 export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
-  if (!env.RAZORPAY_KEY_SECRET) return res.status(501).json({ error: "RAZORPAY_NOT_CONFIGURED" });
+  const keySecret = (env.RAZORPAY_KEY_SECRET || "").trim();
+  if (!keySecret) return res.status(501).json({ error: "RAZORPAY_NOT_CONFIGURED" });
 
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = verifySchema.parse(req.body);
 
   const payload = `${razorpay_order_id}|${razorpay_payment_id}`;
-  const expected = crypto.createHmac("sha256", env.RAZORPAY_KEY_SECRET).update(payload).digest("hex");
+  const expected = crypto.createHmac("sha256", keySecret).update(payload).digest("hex");
 
   if (expected !== razorpay_signature) return res.status(400).json({ error: "INVALID_SIGNATURE" });
 
@@ -97,14 +107,15 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
 });
 
 export const razorpayWebhook = asyncHandler(async (req, res) => {
-  if (!env.RAZORPAY_WEBHOOK_SECRET) return res.status(501).json({ error: "WEBHOOK_NOT_CONFIGURED" });
+  const webhookSecret = (env.RAZORPAY_WEBHOOK_SECRET || "").trim();
+  if (!webhookSecret) return res.status(501).json({ error: "WEBHOOK_NOT_CONFIGURED" });
 
   const signature = req.headers["x-razorpay-signature"];
   if (!signature || typeof signature !== "string") return res.status(400).json({ error: "MISSING_SIGNATURE" });
 
   const raw = req.body;
   const body = Buffer.isBuffer(raw) ? raw.toString("utf8") : JSON.stringify(raw);
-  const expected = crypto.createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET).update(body).digest("hex");
+  const expected = crypto.createHmac("sha256", webhookSecret).update(body).digest("hex");
   if (expected !== signature) return res.status(400).json({ error: "INVALID_SIGNATURE" });
 
   // For demo: acknowledge.
