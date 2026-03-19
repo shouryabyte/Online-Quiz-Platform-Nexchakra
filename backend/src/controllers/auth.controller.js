@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 import { env } from "../config/env.js";
 import { User } from "../models/User.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -12,11 +12,18 @@ function publicUser(user) {
     name: user.name,
     email: user.email,
     avatarUrl: user.avatarUrl,
+    provider: user.provider,
+    roles: user.roles || ["user"],
+
     xp: user.xp,
+    level: user.level,
     streak: user.streak,
     accuracy: user.accuracy,
     quizzesTaken: user.quizzesTaken,
-    provider: user.provider
+
+    badges: user.badges || [],
+    isPremium: user.isPremium,
+    premiumUntil: user.premiumUntil
   };
 }
 
@@ -34,13 +41,12 @@ export const register = asyncHandler(async (req, res) => {
 
   const passwordHash = await hashPassword(password);
   const user = await User.create({ name, email, passwordHash, provider: "local" });
-
   const token = signAccessToken(
     { userId: String(user._id) },
     { secret: env.AUTH_JWT_SECRET, expiresIn: env.AUTH_JWT_EXPIRES_IN }
   );
   setAuthCookie(res, token);
-  res.status(201).json({ user: publicUser(user) });
+  res.status(201).json({ user: publicUser(user.toObject({ virtuals: true })) });
 });
 
 const loginSchema = z.object({
@@ -56,13 +62,12 @@ export const login = asyncHandler(async (req, res) => {
 
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-
   const token = signAccessToken(
     { userId: String(user._id) },
     { secret: env.AUTH_JWT_SECRET, expiresIn: env.AUTH_JWT_EXPIRES_IN }
   );
   setAuthCookie(res, token);
-  res.json({ user: publicUser(user) });
+  res.json({ user: publicUser(user.toObject({ virtuals: true })) });
 });
 
 export const me = asyncHandler(async (req, res) => {

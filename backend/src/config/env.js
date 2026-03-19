@@ -1,4 +1,4 @@
-﻿import dotenv from "dotenv";
+import dotenv from "dotenv";
 import { z } from "zod";
 
 dotenv.config();
@@ -11,12 +11,18 @@ const envSchema = z.object({
   AUTH_JWT_SECRET: z.string().min(32),
   AUTH_JWT_EXPIRES_IN: z.string().default("7d"),
   AUTH_COOKIE_NAME: z.string().default("qp_token"),
+  ADMIN_COOKIE_NAME: z.string().default("qp_admin_token"),
+  ADMIN_JWT_SECRET: z.string().min(32).optional(),
+  ADMIN_JWT_EXPIRES_IN: z.string().default("7d"),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CALLBACK_URL: z.string().optional(),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
-  GITHUB_CALLBACK_URL: z.string().optional()
+  GITHUB_CALLBACK_URL: z.string().optional(),
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional()
 });
 
 const parsed = envSchema.safeParse(process.env);

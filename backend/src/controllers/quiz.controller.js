@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 import mongoose from "mongoose";
 
 import { Quiz } from "../models/Quiz.js";
@@ -94,11 +94,28 @@ const submitSchema = z.object({
   timeTakenSec: z.number().int().min(0).max(60 * 60).optional()
 });
 
+function hasBadge(user, key) {
+  return Array.isArray(user.badges) && user.badges.some((b) => b.key === key);
+}
+
+function awardBadges(user, { correctCount, totalQuestions, timeTakenSec }, quizTimeLimitSec) {
+  const now = new Date();
+  const add = (key) => {
+    if (hasBadge(user, key)) return;
+    user.badges = [...(user.badges || []), { key, earnedAt: now }];
+  };
+
+  if (totalQuestions > 0 && correctCount === totalQuestions) add("perfect_score");
+  if (totalQuestions > 0 && correctCount >= Math.ceil(totalQuestions * 0.8) && timeTakenSec > 0 && timeTakenSec <= Math.floor(quizTimeLimitSec * 0.5)) {
+    add("speed_genius");
+  }
+  if ((user.quizzesTaken || 0) + 1 >= 10) add("quiz_master");
+}
 export const submitQuiz = asyncHandler(async (req, res) => {
   const { id } = z.object({ id: z.string().min(1) }).parse(req.params);
   if (!mongoose.isValidObjectId(id)) return res.status(404).json({ error: "NOT_FOUND" });
 
-  const { answers, timeTakenSec } = submitSchema.parse(req.body);
+  const { answers, timeTakenSec, antiCheat, events } = submitSchema.parse(req.body);
 
   const quiz = await Quiz.findOne({ _id: id, published: true });
   if (!quiz) return res.status(404).json({ error: "NOT_FOUND" });
@@ -127,6 +144,8 @@ export const submitQuiz = asyncHandler(async (req, res) => {
   const timeBonus = Math.max(0, Math.floor((quiz.timeLimitSec - safeTimeTaken) / 10));
   const xpAwarded = Math.min(250, correctCount * 10 + timeBonus);
 
+  const suspiciousScore = (antiCheat?.tabHiddenCount || 0) * 2 + (antiCheat?.fullscreenExitCount || 0) * 2;
+
   const attempt = await QuizAttempt.create({
     userId: req.user._id,
     quizId: quiz._id,
@@ -135,7 +154,13 @@ export const submitQuiz = asyncHandler(async (req, res) => {
     correctCount,
     timeTakenSec: safeTimeTaken,
     xpAwarded,
-    answers: detailedAnswers
+    answers: detailedAnswers,
+    antiCheat: {
+      tabHiddenCount: antiCheat?.tabHiddenCount || 0,
+      fullscreenExitCount: antiCheat?.fullscreenExitCount || 0,
+      suspiciousScore
+    },
+    events: events || []
   });
 
   const user = await User.findById(req.user._id);
@@ -150,6 +175,8 @@ export const submitQuiz = asyncHandler(async (req, res) => {
     user.totalCorrect += correctCount;
     user.totalAnswered += totalQuestions;
     user.xp += xpAwarded;
+
+    awardBadges(user, { correctCount, totalQuestions, timeTakenSec: safeTimeTaken }, quiz.timeLimitSec);
 
     await user.save();
   }

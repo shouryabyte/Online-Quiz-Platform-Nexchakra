@@ -19,7 +19,7 @@ export function Layout(props: { children: ReactNode; user?: PublicUser | null; o
                   <span className="font-extrabold tracking-tight">NexChakra Quiz</span>
                 </Link>
 
-                <div className="hidden items-center gap-3 text-sm text-white/80 md:flex">
+                <div className="hidden items-center gap-2 text-sm text-white/80 md:flex">
                   <Link href="/quizzes" className="rounded-xl px-3 py-2 transition-all hover:bg-white/5 hover:text-white">
                     Quizzes
                   </Link>
@@ -28,6 +28,18 @@ export function Layout(props: { children: ReactNode; user?: PublicUser | null; o
                   </Link>
                   <Link href="/dashboard" className="rounded-xl px-3 py-2 transition-all hover:bg-white/5 hover:text-white">
                     Dashboard
+                  </Link>
+                  <Link href="/analytics" className="rounded-xl px-3 py-2 transition-all hover:bg-white/5 hover:text-white">
+                    Analytics
+                  </Link>
+                  <Link href="/creator" className="rounded-xl px-3 py-2 transition-all hover:bg-white/5 hover:text-white">
+                    Creator
+                  </Link>
+                  <Link href="/ai" className="rounded-xl px-3 py-2 transition-all hover:bg-white/5 hover:text-white">
+                    AI
+                  </Link>
+                  <Link href="/pricing" className="rounded-xl px-3 py-2 transition-all hover:bg-white/5 hover:text-white">
+                    Pricing
                   </Link>
                 </div>
               </div>
@@ -64,15 +76,30 @@ export function Layout(props: { children: ReactNode; user?: PublicUser | null; o
               </div>
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-2 md:hidden">
-              <Link href="/quizzes" className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+            <div className="mt-3 grid grid-cols-4 gap-2 md:hidden">
+              <Link href="/quizzes" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
                 Quizzes
               </Link>
-              <Link href="/leaderboard" className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+              <Link href="/leaderboard" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
                 Leaderboard
               </Link>
-              <Link href="/dashboard" className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+              <Link href="/dashboard" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
                 Dashboard
+              </Link>
+              <Link href="/analytics" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+                Analytics
+              </Link>
+              <Link href="/creator" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+                Creator
+              </Link>
+              <Link href="/ai" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+                AI
+              </Link>
+              <Link href="/pricing" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+                Pricing
+              </Link>
+              <Link href="/" className="rounded-xl bg-white/5 px-3 py-2 text-center text-sm text-white/80">
+                Home
               </Link>
             </div>
           </nav>

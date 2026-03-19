@@ -1,4 +1,4 @@
-﻿import { User } from "../models/User.js";
+import { User } from "../models/User.js";
 import { QuizAttempt } from "../models/QuizAttempt.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 

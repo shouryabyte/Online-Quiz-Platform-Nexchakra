@@ -1,4 +1,4 @@
-﻿import mongoose from "mongoose";
+import mongoose from "mongoose";
 
 const attemptAnswerSchema = new mongoose.Schema(
   {
@@ -7,6 +7,15 @@ const attemptAnswerSchema = new mongoose.Schema(
     correctIndex: { type: Number, required: true, min: 0 },
     isCorrect: { type: Boolean, required: true },
     topic: { type: String, default: "", trim: true, maxlength: 80 }
+  },
+  { _id: false }
+);
+
+const eventSchema = new mongoose.Schema(
+  {
+    type: { type: String, required: true, trim: true, maxlength: 40 },
+    ts: { type: Number, required: true },
+    meta: { type: Object, default: {} }
   },
   { _id: false }
 );
@@ -22,7 +31,14 @@ const quizAttemptSchema = new mongoose.Schema(
     timeTakenSec: { type: Number, default: 0, min: 0 },
 
     xpAwarded: { type: Number, default: 0, min: 0 },
-    answers: { type: [attemptAnswerSchema], default: [] }
+    answers: { type: [attemptAnswerSchema], default: [] },
+
+    antiCheat: {
+      tabHiddenCount: { type: Number, default: 0, min: 0 },
+      fullscreenExitCount: { type: Number, default: 0, min: 0 },
+      suspiciousScore: { type: Number, default: 0, min: 0 }
+    },
+    events: { type: [eventSchema], default: [] }
   },
   { timestamps: true }
 );

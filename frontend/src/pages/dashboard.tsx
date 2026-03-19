@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Flame, Target, Trophy, Zap } from "lucide-react";
 
 import { Layout } from "../components/Layout";
-import { getDashboard, logout, type DashboardStats, type RecentAttempt } from "../lib/api";
+import { getDashboard, logout, me, type DashboardStats, type RecentAttempt, type PublicUser } from "../lib/api";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString();
@@ -12,6 +12,7 @@ function formatDate(iso: string) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [user, setUser] = useState<PublicUser | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [attempts, setAttempts] = useState<RecentAttempt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,13 @@ export default function DashboardPage() {
     let alive = true;
     (async () => {
       try {
+        try {
+          const u = await me();
+          if (!alive) return;
+          setUser(u.user);
+        } catch {
+          // ignore
+        }
         const data = await getDashboard();
         if (!alive) return;
         setStats(data.stats);
@@ -45,21 +53,7 @@ export default function DashboardPage() {
 
   return (
     <Layout
-      user={
-        stats
-          ? {
-              id: stats.id,
-              name: stats.name,
-              email: stats.email,
-              avatarUrl: stats.avatarUrl,
-              provider: stats.provider,
-              xp: stats.xp,
-              streak: stats.streak,
-              quizzesTaken: stats.quizzesTaken,
-              accuracy: stats.accuracy
-            }
-          : null
-      }
+      user={user}
       onLogout={async () => {
         try {
           await logout();

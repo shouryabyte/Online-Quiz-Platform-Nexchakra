@@ -1,13 +1,28 @@
+export type Badge = { key: string; earnedAt: string };
+
 export type PublicUser = {
   id: string;
   name: string;
   email?: string;
   avatarUrl?: string;
   provider: "local" | "google" | "github";
+  roles: string[];
+
   xp: number;
+  level: number;
   streak: number;
   quizzesTaken: number;
   accuracy: number;
+
+  badges: Badge[];
+  isPremium: boolean;
+  premiumUntil: string | null;
+};
+
+export type AdminSession = {
+  id: string;
+  name: string;
+  email: string;
 };
 
 export type CategorySummary = { name: string; quizCount: number };
@@ -72,11 +87,15 @@ export type DashboardStats = {
   avatarUrl?: string;
   provider: "local" | "google" | "github";
   xp: number;
+  level: number;
   rank: number;
   streak: number;
   quizzesTaken: number;
   accuracy: number;
   lastQuizAt: string | null;
+  badges: Badge[];
+  isPremium: boolean;
+  premiumUntil: string | null;
 };
 
 export type RecentAttempt = {
@@ -94,6 +113,52 @@ export type RecentAttempt = {
   totalQuestions: number;
   timeTakenSec: number;
   xpAwarded: number;
+};
+
+export type TopicStat = { topic: string; total: number; correct: number; accuracy: number };
+
+export type Analytics = {
+  overview: { attempts: number; accuracy: number; avgSecPerQuestion: number };
+  topicStats: TopicStat[];
+};
+
+export type CreatorQuizSummary = {
+  id: string;
+  title: string;
+  category: string;
+  difficulty: "easy" | "medium" | "hard";
+  timeLimitSec: number;
+  published: boolean;
+  questionCount: number;
+  updatedAt: string;
+};
+
+export type CreatorQuestion = {
+  prompt: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  topic: string;
+};
+
+export type CreatorQuiz = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: "easy" | "medium" | "hard";
+  timeLimitSec: number;
+  published: boolean;
+  questions: CreatorQuestion[];
+};
+
+export type GeneratedQuiz = {
+  title: string;
+  description: string;
+  category: string;
+  difficulty: "easy" | "medium" | "hard";
+  timeLimitSec: number;
+  questions: CreatorQuestion[];
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
@@ -140,6 +205,21 @@ export async function me() {
   return apiFetch<{ user: PublicUser }>("/api/auth/me");
 }
 
+export async function adminLogin(input: { email: string; password: string }) {
+  return apiFetch<{ admin: AdminSession }>("/api/admin/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function adminLogout() {
+  return apiFetch<void>("/api/admin/auth/logout", { method: "POST" });
+}
+
+export async function adminMe() {
+  return apiFetch<{ admin: AdminSession }>("/api/admin/auth/me");
+}
+
 export async function getCategories() {
   return apiFetch<{ categories: CategorySummary[] }>("/api/quizzes/categories");
 }
@@ -156,7 +236,15 @@ export async function getQuiz(id: string) {
   return apiFetch<{ quiz: QuizForPlay }>(`/api/quizzes/${id}`);
 }
 
-export async function submitQuiz(id: string, input: { answers: number[]; timeTakenSec: number }) {
+export async function submitQuiz(
+  id: string,
+  input: {
+    answers: number[];
+    timeTakenSec: number;
+    antiCheat?: { tabHiddenCount: number; fullscreenExitCount: number };
+    events?: { type: string; ts: number; meta?: Record<string, unknown> }[];
+  }
+) {
   return apiFetch<{ result: QuizResult }>(`/api/quizzes/${id}/submit`, {
     method: "POST",
     body: JSON.stringify(input)
@@ -173,6 +261,67 @@ export async function getMyRank() {
 
 export async function getDashboard() {
   return apiFetch<{ stats: DashboardStats; recentAttempts: RecentAttempt[] }>("/api/dashboard");
+}
+
+export async function getMyAnalytics() {
+  return apiFetch<Analytics>("/api/analytics/me");
+}
+
+export async function creatorListQuizzes() {
+  return apiFetch<{ quizzes: CreatorQuizSummary[] }>("/api/creator/quizzes");
+}
+
+export async function creatorCreateQuiz(input: {
+  title: string;
+  description?: string;
+  category: string;
+  difficulty: "easy" | "medium" | "hard";
+  timeLimitSec: number;
+}) {
+  return apiFetch<{ quizId: string }>("/api/creator/quizzes", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function creatorGetQuiz(id: string) {
+  return apiFetch<{ quiz: CreatorQuiz }>(`/api/creator/quizzes/${id}`);
+}
+
+export async function creatorUpdateQuiz(id: string, input: Partial<Omit<CreatorQuiz, "id" | "questions">>) {
+  return apiFetch<{ ok: true }>(`/api/creator/quizzes/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export async function creatorSetQuestions(id: string, questions: CreatorQuestion[]) {
+  return apiFetch<{ ok: true }>(`/api/creator/quizzes/${id}/questions`, { method: "PUT", body: JSON.stringify({ questions }) });
+}
+
+export async function creatorImportCsv(id: string, csv: string) {
+  return apiFetch<{ ok: true; imported: number }>(`/api/creator/quizzes/${id}/import/csv`, { method: "POST", body: JSON.stringify({ csv }) });
+}
+
+export async function creatorSetPublished(id: string, published: boolean) {
+  return apiFetch<{ ok: true }>(`/api/creator/quizzes/${id}/publish`, { method: "PATCH", body: JSON.stringify({ published }) });
+}
+
+export async function creatorDeleteQuiz(id: string) {
+  return apiFetch<void>(`/api/creator/quizzes/${id}`, { method: "DELETE" });
+}
+
+export async function aiGenerateQuiz(input: { topic: string; category?: string; difficulty?: "easy" | "medium" | "hard"; questionCount?: number }) {
+  return apiFetch<{ quiz: GeneratedQuiz }>("/api/ai/generate", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function createRazorpayOrder(plan: "premium_month" | "premium_year") {
+  return apiFetch<{ keyId: string; order: { id: string; amount: number; currency: string }; plan: string }>("/api/payments/razorpay/order", {
+    method: "POST",
+    body: JSON.stringify({ plan })
+  });
+}
+
+export async function verifyRazorpayPayment(input: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}) {
+  return apiFetch<{ ok: true; premiumUntil: string }>("/api/payments/razorpay/verify", { method: "POST", body: JSON.stringify(input) });
 }
 
 export function oauthUrl(provider: "google" | "github") {
