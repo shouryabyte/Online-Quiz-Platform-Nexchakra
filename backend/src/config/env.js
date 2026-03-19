@@ -8,6 +8,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   MONGODB_URI: z.string().min(1),
   CLIENT_ORIGIN: z.string().url(),
+  CLIENT_ORIGINS: z.string().optional(),
   AUTH_JWT_SECRET: z.string().min(32),
   AUTH_JWT_EXPIRES_IN: z.string().default("7d"),
   AUTH_COOKIE_NAME: z.string().default("qp_token"),

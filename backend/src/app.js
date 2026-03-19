@@ -27,10 +27,20 @@ export function createApp() {
   app.post("/api/payments/razorpay/webhook", express.raw({ type: "application/json" }), razorpayWebhook);
 
   app.use(express.json({ limit: "1mb" }));
+  app.set("trust proxy", 1);
   app.use(cookieParser());
+  const allowedOrigins = new Set([
+    env.CLIENT_ORIGIN,
+    ...(env.CLIENT_ORIGINS ? env.CLIENT_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean) : [])
+  ]);
+
   app.use(
     cors({
-      origin: env.CLIENT_ORIGIN,
+      origin: (origin, cb) => {
+        // allow same-origin / server-to-server requests
+        if (!origin) return cb(null, true);
+        return cb(null, allowedOrigins.has(origin));
+      },
       credentials: true
     })
   );
@@ -38,6 +48,7 @@ export function createApp() {
   configureOAuth(app);
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
+  app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
   app.use("/api/auth", authRouter);
   app.use("/api/admin/auth", adminAuthRouter);

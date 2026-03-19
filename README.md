@@ -80,3 +80,26 @@ docker compose up --build
 Notes:
 - docker-compose.yml loads backend env vars from backend/.env
 - Update MONGODB_URI if you want to use the compose Mongo service
+## Vercel deployment (frontend + backend)
+
+Deploy as two separate Vercel projects:
+
+### Backend (Vercel)
+- Project root: `backend`
+- Uses Serverless Functions from `backend/api/[...path].js`
+- Set env vars (at minimum):
+  - `MONGODB_URI`
+  - `CLIENT_ORIGIN` (your frontend Vercel URL)
+  - `AUTH_JWT_SECRET`
+  - `ADMIN_JWT_SECRET` (if using admin)
+  - Optional: `GROQ_API_KEY`, Razorpay keys
+
+### Frontend (Vercel)
+- Project root: `frontend`
+- Set env var:
+  - `NEXT_PUBLIC_API_BASE_URL` = your backend Vercel URL (e.g. https://your-backend.vercel.app)
+
+Important:
+- Because frontend and backend are on different domains, cookies require:
+  - `SameSite=None` and `Secure` (handled automatically when `NODE_ENV=production`)
+  - CORS `CLIENT_ORIGIN` must exactly match the deployed frontend URL
