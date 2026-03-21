@@ -1,4 +1,4 @@
-export type Badge = { key: string; earnedAt: string };
+﻿export type Badge = { key: string; earnedAt: string };
 
 export type PublicUser = {
   id: string;
@@ -161,7 +161,10 @@ export type GeneratedQuiz = {
   questions: CreatorQuestion[];
 };
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000").replace(/\/+$/, "");
+const API_BASE =
+  process.env.NODE_ENV === "production"
+    ? ""
+    : (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000").replace(/\/+$/, "");
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`, {
@@ -325,5 +328,5 @@ export async function verifyRazorpayPayment(input: {
 }
 
 export function oauthUrl(provider: "google" | "github") {
-  return `${API_BASE}/api/auth/${provider}`;
+  return API_BASE ? `${API_BASE}/api/auth/${provider}` : `/api/auth/${provider}`;
 }
