@@ -59,8 +59,19 @@ function getForwardedQuery(req: NextApiRequest) {
   // Next/Vercel internal params for catch-all routing
   params.delete("path");
   params.delete("nxtPpath");
+  // Debug flag (handled by proxy itself)
+  params.delete("__debug");
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+function isDebugRequest(req: NextApiRequest) {
+  const q = (req.query as any).__debug;
+  if (q === "1" || q === 1) return true;
+  const header = req.headers["x-proxy-debug"];
+  if (typeof header === "string" && header === "1") return true;
+  if (Array.isArray(header) && header.includes("1")) return true;
+  return process.env.PROXY_DEBUG === "1";
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -74,12 +85,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const base = stripTrailingSlashes(target);
   const url = `${base}/api${forwardedPath ? `/${forwardedPath}` : ""}${query}`;
 
-  if (process.env.PROXY_DEBUG === "1") {
-    // eslint-disable-next-line no-console
-    console.log("[proxy]", req.method, req.url, "->", url);
+  const debug = isDebugRequest(req);
+  if (debug) {
     res.setHeader("x-proxy-target", base);
     res.setHeader("x-proxy-path", forwardedPath || "");
     res.setHeader("x-proxy-url", url);
+
+    if ((req.method || "GET") === "GET") {
+      // Allow quick verification from the browser without needing a POST.
+      return res.status(200).json({ ok: true, forwardedPath, url });
+    }
+
+    // eslint-disable-next-line no-console
+    console.log("[proxy]", req.method, req.url, "->", url);
   }
 
   const headers: Record<string, string> = {};
