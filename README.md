@@ -82,29 +82,41 @@ Notes:
 - Update MONGODB_URI if you want to use the compose Mongo service
 ## Vercel deployment (frontend + backend)
 
-Deploy as two separate Vercel projects:
+Deploy as two separate Vercel projects (recommended):
 
 ### Backend (Vercel)
 - Project root: `backend`
-- Uses Serverless Functions from `backend/api/[...path].js`
-- Set env vars (at minimum):
+- Serverless entry: `backend/api/[...path].js`
+- Required env vars:
   - `MONGODB_URI`
+  - `AUTH_JWT_SECRET` (32+ chars)
   - `CLIENT_ORIGIN` (your frontend Vercel URL)
-  - Optional: `CLIENT_ORIGINS` (comma-separated extra exact origins)
-  - Optional: `CLIENT_ORIGIN_REGEX` (regex for preview domains, e.g. `^https://.*\\.vercel\\.app$`)
-  - `AUTH_JWT_SECRET`
-  - `ADMIN_JWT_SECRET` (if using admin)
-  - Optional: `GROQ_API_KEY`, Razorpay keys
+- If using admin:
+  - `ADMIN_JWT_SECRET` (32+ chars)
+- Optional:
+  - `CLIENT_ORIGINS` (comma-separated extra exact origins)
+  - `CLIENT_ORIGIN_REGEX` (regex for preview domains, e.g. `^https://.*\\.vercel\\.app$`)
+  - OAuth vars + Razorpay + Groq
 
 ### Frontend (Vercel)
 - Project root: `frontend`
-- Set env var:
-  - `NEXT_PUBLIC_API_BASE_URL` = your backend Vercel URL (e.g. https://your-backend.vercel.app)
 
-Important:
-- Because frontend and backend are on different domains, cookies require:
-  - `SameSite=None` and `Secure` (handled automatically when `NODE_ENV=production`)
-  - CORS `CLIENT_ORIGIN` must exactly match the deployed frontend URL (or match `CLIENT_ORIGIN_REGEX`)
+**Recommended setup (avoids third-party cookie/OAuth issues):**
+- In the frontend project env vars set:
+  - `NEXT_PUBLIC_API_BASE_URL` = your *frontend* URL (e.g. `https://your-frontend.vercel.app`)
+  - `API_PROXY_TARGET` = your *backend* URL (e.g. `https://your-backend.vercel.app`)
+- This makes `/api/*` on the frontend proxy to the backend, so auth cookies and OAuth callbacks stay first-party.
+
+**Direct setup (frontend calls backend domain):**
+- In the frontend project env vars set:
+  - `NEXT_PUBLIC_API_BASE_URL` = your backend URL (e.g. `https://your-backend.vercel.app`)
+- Ensure cookies and CORS are correct:
+  - `NODE_ENV=production` on backend so cookies are `SameSite=None; Secure`
+  - `CLIENT_ORIGIN` must exactly match the frontend URL (or match `CLIENT_ORIGIN_REGEX`)
+
+Common causes of `404 /api/auth/google`:
+- `NEXT_PUBLIC_API_BASE_URL` points to the wrong domain (often the frontend), but the backend is not proxied.
+- Backend Vercel project root directory is not set to `backend` (so `backend/api` functions are not deployed).
 
 Security note:
-- Never commit `.env` files. If you previously committed real keys/URIs, rotate them immediately (MongoDB user/pass, OAuth client secrets, Razorpay keys, Groq key).
+- Never commit `.env` files. If any real keys/URIs were exposed, rotate them immediately (MongoDB creds, OAuth secrets, Razorpay keys, Groq key).

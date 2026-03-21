@@ -45,7 +45,13 @@ if (!parsed.success) {
     // eslint-disable-next-line no-console
     console.error(`- ${key}: ${issue.message}`);
   }
-  process.exit(1);
+  const details = parsed.error.issues
+    .map((issue) => {
+      const key = issue.path.join(".") || "(root)";
+      return `${key}: ${issue.message}`;
+    })
+    .join("; ");
+  throw new Error(`ENV_VALIDATION_FAILED: ${details}`);
 }
 
 export const env = parsed.data;
