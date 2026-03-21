@@ -87,7 +87,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {loading ? <p className="mt-6 text-sm text-white/70">Loading…</p> : null}
+        {loading ? <p className="mt-6 text-sm text-white/70">Loading...</p> : null}
         {error ? <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
 
         {stats ? (
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <div className="text-xs font-semibold tracking-wide text-white/60">Last activity</div>
               <div className="mt-2 text-lg font-extrabold text-white">
-                {stats.lastQuizAt ? formatDate(stats.lastQuizAt) : "—"}
+                {stats.lastQuizAt ? formatDate(stats.lastQuizAt) : "-"}
               </div>
             </div>
           </div>

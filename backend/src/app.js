@@ -9,6 +9,7 @@ import { connectDb } from "./db/connect.js";
 import { env } from "./config/env.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { adminAuthRouter } from "./routes/adminAuth.routes.js";
+import { adminRouter } from "./routes/admin.routes.js";
 import { quizRouter } from "./routes/quiz.routes.js";
 import { leaderboardRouter } from "./routes/leaderboard.routes.js";
 import { dashboardRouter } from "./routes/dashboard.routes.js";
@@ -68,6 +69,7 @@ export function createApp() {
 
   app.use("/api/auth", authRouter);
   app.use("/api/admin/auth", adminAuthRouter);
+  app.use("/api/admin", adminRouter);
   app.use("/api/quizzes", quizRouter);
   app.use("/api/leaderboard", leaderboardRouter);
   app.use("/api/dashboard", dashboardRouter);

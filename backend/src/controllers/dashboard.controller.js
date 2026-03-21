@@ -22,7 +22,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).lean({ virtuals: true });
   if (!user) return res.status(401).json({ error: "UNAUTHENTICATED" });
 
-  const higher = await User.countDocuments({ xp: { $gt: user.xp } });
+  const higher = await User.countDocuments({ roles: { $nin: ["admin"] }, xp: { $gt: user.xp } });
   const rank = higher + 1;
 
   const attempts = await QuizAttempt.find({ userId: user._id })

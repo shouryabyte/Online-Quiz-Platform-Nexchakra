@@ -44,7 +44,7 @@ export default function AiPage() {
           </div>
           <div className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
             <Sparkles className="h-4 w-4 text-cyan-200" />
-            Demo generator (no external API required)
+            Powered by Groq when configured
           </div>
         </div>
 

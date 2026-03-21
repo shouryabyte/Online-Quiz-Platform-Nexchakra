@@ -55,7 +55,7 @@ export default function LeaderboardPage() {
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-white">Leaderboard</h1>
-            <p className="mt-2 text-sm leading-relaxed text-white/70">Top players by XP. Your rank: {myRank ? <b>#{myRank}</b> : "—"}</p>
+            <p className="mt-2 text-sm leading-relaxed text-white/70">Top players by XP. Your rank: {myRank ? <b>#{myRank}</b> : "â€”"}</p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
@@ -63,7 +63,7 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        {loading ? <p className="mt-6 text-sm text-white/70">Loading…</p> : null}
+        {loading ? <p className="mt-6 text-sm text-white/70">Loadingâ€¦</p> : null}
         {error ? <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</div> : null}
 
         {!loading && !error ? (
