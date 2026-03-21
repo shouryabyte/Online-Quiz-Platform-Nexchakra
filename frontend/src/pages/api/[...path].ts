@@ -1,4 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { pathToFileURL } from "url";
+import * as fs from "fs";
+import * as path from "path";
 
 export const config = {
   api: {
@@ -6,28 +9,7 @@ export const config = {
   }
 };
 
-const hopByHop = new Set([
-  "connection",
-  "keep-alive",
-  "proxy-authenticate",
-  "proxy-authorization",
-  "te",
-  "trailer",
-  "transfer-encoding",
-  "upgrade"
-]);
-
-function stripTrailingSlashes(value: string) {
-  return value.replace(/\/+$/, "");
-}
-
-async function readRawBody(req: NextApiRequest): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks);
-}
+let backendAppPromise: Promise<(req: any, res: any) => any> | null = null;
 
 function getForwardedPath(req: NextApiRequest) {
   const parts = Array.isArray(req.query.path)
@@ -56,11 +38,14 @@ function getForwardedQuery(req: NextApiRequest) {
   const qIndex = rawUrl.indexOf("?");
   const rawQuery = qIndex >= 0 ? rawUrl.slice(qIndex + 1) : "";
   const params = new URLSearchParams(rawQuery);
+
   // Next/Vercel internal params for catch-all routing
   params.delete("path");
   params.delete("nxtPpath");
+
   // Debug flag (handled by proxy itself)
   params.delete("__debug");
+
   const query = params.toString();
   return query ? `?${query}` : "";
 }
@@ -74,71 +59,68 @@ function isDebugRequest(req: NextApiRequest) {
   return process.env.PROXY_DEBUG === "1";
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const target = process.env.API_PROXY_TARGET;
-  if (!target) {
-    return res.status(502).json({ error: "API_PROXY_TARGET_NOT_SET" });
-  }
+async function getBackendApp() {
+  if (backendAppPromise) return backendAppPromise;
 
+  backendAppPromise = (async () => {
+    // Support Vercel Root Directory = `frontend` where `backend/` exists outside root,
+    // with "Include files outside the root directory" enabled.
+    const appCandidates = [
+      path.resolve(process.cwd(), "backend", "src", "app.js"),
+      path.resolve(process.cwd(), "..", "backend", "src", "app.js")
+    ];
+
+    const appPath = appCandidates.find((p) => fs.existsSync(p));
+    if (!appPath) throw new Error("BACKEND_APP_NOT_FOUND");
+
+    const envCandidates = [
+      path.resolve(process.cwd(), "backend", "src", "config", "env.js"),
+      path.resolve(process.cwd(), "..", "backend", "src", "config", "env.js")
+    ];
+
+    const envPath = envCandidates.find((p) => fs.existsSync(p));
+    if (!envPath) throw new Error("BACKEND_ENV_NOT_FOUND");
+
+    const dbCandidates = [
+      path.resolve(process.cwd(), "backend", "src", "db", "connect.js"),
+      path.resolve(process.cwd(), "..", "backend", "src", "db", "connect.js")
+    ];
+
+    const dbPath = dbCandidates.find((p) => fs.existsSync(p));
+    if (!dbPath) throw new Error("BACKEND_DB_CONNECT_NOT_FOUND");
+
+    const [{ createApp }, { env }, { connectDb }] = await Promise.all([
+      import(pathToFileURL(appPath).href),
+      import(pathToFileURL(envPath).href),
+      import(pathToFileURL(dbPath).href)
+    ]);
+
+    await connectDb(env.MONGODB_URI);
+    return createApp();
+  })();
+
+  return backendAppPromise;
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const forwardedPath = getForwardedPath(req);
   const query = getForwardedQuery(req);
-  const base = stripTrailingSlashes(target);
-  const url = `${base}/api${forwardedPath ? `/${forwardedPath}` : ""}${query}`;
+  const normalizedUrl = `/api${forwardedPath ? `/${forwardedPath}` : ""}${query}`;
 
   const debug = isDebugRequest(req);
   if (debug) {
-    res.setHeader("x-proxy-target", base);
-    res.setHeader("x-proxy-path", forwardedPath || "");
-    res.setHeader("x-proxy-url", url);
+    res.setHeader("x-api-mode", "local-backend");
+    res.setHeader("x-api-path", forwardedPath || "");
+    res.setHeader("x-api-url", normalizedUrl);
 
     if ((req.method || "GET") === "GET") {
-      // Allow quick verification from the browser without needing a POST.
-      return res.status(200).json({ ok: true, forwardedPath, url });
+      return res.status(200).json({ ok: true, mode: "local-backend", forwardedPath, url: normalizedUrl });
     }
-
-    // eslint-disable-next-line no-console
-    console.log("[proxy]", req.method, req.url, "->", url);
   }
 
-  const headers: Record<string, string> = {};
-  for (const [key, value] of Object.entries(req.headers)) {
-    const lower = key.toLowerCase();
-    if (hopByHop.has(lower)) continue;
-    if (lower === "host") continue;
-    if (typeof value === "undefined") continue;
-    headers[key] = Array.isArray(value) ? value.join(",") : value;
-  }
+  // Ensure Express route matching sees `/api/...`.
+  (req as any).url = normalizedUrl;
 
-  const method = req.method || "GET";
-  const body = method === "GET" || method === "HEAD" ? undefined : await readRawBody(req);
-
-  const upstream = await fetch(url, {
-    method,
-    headers,
-    body: body as any,
-    redirect: "manual"
-  });
-
-  res.status(upstream.status);
-  for (const [key, value] of upstream.headers.entries()) {
-    const lower = key.toLowerCase();
-    if (hopByHop.has(lower)) continue;
-    if (lower === "content-encoding") continue;
-    if (lower === "content-length") continue;
-    if (lower === "set-cookie") continue;
-    res.setHeader(key, value);
-  }
-
-  const anyHeaders = upstream.headers as any;
-  const setCookies: string[] | undefined = typeof anyHeaders.getSetCookie === "function" ? anyHeaders.getSetCookie() : undefined;
-  if (setCookies && setCookies.length) {
-    res.setHeader("Set-Cookie", setCookies);
-  }
-
-  if (upstream.status === 204) {
-    return res.end();
-  }
-
-  const buf = Buffer.from(await upstream.arrayBuffer());
-  return res.send(buf);
+  const app = await getBackendApp();
+  return app(req as any, res as any);
 }
