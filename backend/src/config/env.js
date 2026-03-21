@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+﻿import dotenv from "dotenv";
 import { z } from "zod";
 
 dotenv.config();
@@ -9,6 +9,7 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(1),
   CLIENT_ORIGIN: z.string().url(),
   CLIENT_ORIGINS: z.string().optional(),
+  CLIENT_ORIGIN_REGEX: z.string().optional(),
   AUTH_JWT_SECRET: z.string().min(32),
   AUTH_JWT_EXPIRES_IN: z.string().default("7d"),
   AUTH_COOKIE_NAME: z.string().default("qp_token"),
@@ -36,7 +37,7 @@ if (!parsed.success) {
   // eslint-disable-next-line no-console
   console.error("Invalid/missing environment variables.");
   // eslint-disable-next-line no-console
-  console.error("Create `backend/.env` by copying `backend/.env.example`, then fill required values.");
+  console.error("For local dev: copy `backend/.env.example` to `backend/.env`. For Vercel: set these variables in the project Environment Variables.");
   // eslint-disable-next-line no-console
   console.error("Problems:");
   for (const issue of parsed.error.issues) {
@@ -48,3 +49,5 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+

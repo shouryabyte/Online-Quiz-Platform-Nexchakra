@@ -90,6 +90,8 @@ Deploy as two separate Vercel projects:
 - Set env vars (at minimum):
   - `MONGODB_URI`
   - `CLIENT_ORIGIN` (your frontend Vercel URL)
+  - Optional: `CLIENT_ORIGINS` (comma-separated extra exact origins)
+  - Optional: `CLIENT_ORIGIN_REGEX` (regex for preview domains, e.g. `^https://.*\\.vercel\\.app$`)
   - `AUTH_JWT_SECRET`
   - `ADMIN_JWT_SECRET` (if using admin)
   - Optional: `GROQ_API_KEY`, Razorpay keys
@@ -102,4 +104,7 @@ Deploy as two separate Vercel projects:
 Important:
 - Because frontend and backend are on different domains, cookies require:
   - `SameSite=None` and `Secure` (handled automatically when `NODE_ENV=production`)
-  - CORS `CLIENT_ORIGIN` must exactly match the deployed frontend URL
+  - CORS `CLIENT_ORIGIN` must exactly match the deployed frontend URL (or match `CLIENT_ORIGIN_REGEX`)
+
+Security note:
+- Never commit `.env` files. If you previously committed real keys/URIs, rotate them immediately (MongoDB user/pass, OAuth client secrets, Razorpay keys, Groq key).

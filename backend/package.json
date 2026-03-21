@@ -27,5 +27,9 @@
                          "passport-google-oauth20":  "^2.0.0",
                          "zod":  "^3.23.8",
                          "razorpay":  "^2.9.5"
-                     }
+                     },
+    "engines":  {
+                    "node":  "\u003e=18"
+                }
 }
+

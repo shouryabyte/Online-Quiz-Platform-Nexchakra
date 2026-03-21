@@ -1,4 +1,4 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -33,13 +33,26 @@ export function createApp() {
     env.CLIENT_ORIGIN,
     ...(env.CLIENT_ORIGINS ? env.CLIENT_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean) : [])
   ]);
+  let allowedOriginRegex = null;
+  if (env.CLIENT_ORIGIN_REGEX) {
+    try {
+      allowedOriginRegex = new RegExp(env.CLIENT_ORIGIN_REGEX);
+    } catch {
+      throw new Error("Invalid CLIENT_ORIGIN_REGEX");
+    }
+  }
+
+  const isAllowedOrigin = (origin) => {
+    if (allowedOrigins.has(origin)) return true;
+    return allowedOriginRegex ? allowedOriginRegex.test(origin) : false;
+  };
 
   app.use(
     cors({
       origin: (origin, cb) => {
         // allow same-origin / server-to-server requests
         if (!origin) return cb(null, true);
-        return cb(null, allowedOrigins.has(origin));
+        return cb(null, isAllowedOrigin(origin));
       },
       credentials: true
     })
@@ -69,3 +82,5 @@ export function createApp() {
 
   return app;
 }
+
+
