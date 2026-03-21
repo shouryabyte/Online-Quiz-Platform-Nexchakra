@@ -1,10 +1,16 @@
 {
   "name": "online-quiz-platform-nexchakra",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "npm -C frontend run dev",
-    "build": "npm -C frontend run build",
-    "lint": "npm -C frontend run build"
+    "dev": "npm -w frontend run dev",
+    "dev:backend": "npm -w backend run dev",
+    "build": "npm -w frontend run build",
+    "build:backend": "npm -w backend run lint",
+    "start": "npm -w frontend run start"
   },
   "engines": {
     "node": ">=18"
