@@ -161,10 +161,10 @@ export type GeneratedQuiz = {
   questions: CreatorQuestion[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000").replace(/\/+$/, "");
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",

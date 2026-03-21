@@ -29,9 +29,10 @@ export function createApp() {
   app.use(express.json({ limit: "1mb" }));
   app.set("trust proxy", 1);
   app.use(cookieParser());
+  const normalizeOrigin = (value) => value.replace(/\/+$/, "");
   const allowedOrigins = new Set([
-    env.CLIENT_ORIGIN,
-    ...(env.CLIENT_ORIGINS ? env.CLIENT_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean) : [])
+    normalizeOrigin(env.CLIENT_ORIGIN),
+    ...(env.CLIENT_ORIGINS ? env.CLIENT_ORIGINS.split(",").map((s) => normalizeOrigin(s.trim())).filter(Boolean) : [])
   ]);
   let allowedOriginRegex = null;
   if (env.CLIENT_ORIGIN_REGEX) {
