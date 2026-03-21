@@ -19,6 +19,14 @@ async function getApp() {
 
 export default async function handler(req, res) {
   try {
+    // In some Vercel setups, serverless functions mounted under /api/* may receive
+    // req.url without the /api prefix. Our Express app mounts routes under /api/*,
+    // so normalize here to support both shapes.
+    if (typeof req.url === "string" && !req.url.startsWith("/api")) {
+      const suffix = req.url.startsWith("/") ? req.url : "/" + req.url;
+      req.url = "/api" + suffix;
+    }
+
     const app = await getApp();
     return app(req, res);
   } catch (err) {
