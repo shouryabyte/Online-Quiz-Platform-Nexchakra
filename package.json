@@ -1,0 +1,12 @@
+{
+  "name": "online-quiz-platform-nexchakra",
+  "private": true,
+  "scripts": {
+    "dev": "npm -C frontend run dev",
+    "build": "npm -C frontend run build",
+    "lint": "npm -C frontend run build"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
