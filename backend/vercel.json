@@ -1,6 +1,9 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/", "destination": "/api/health" },
+    { "source": "/favicon.ico", "destination": "/api/health" },
+    { "source": "/favicon.png", "destination": "/api/health" },
     { "source": "/health", "destination": "/api/health" }
   ],
   "functions": {
