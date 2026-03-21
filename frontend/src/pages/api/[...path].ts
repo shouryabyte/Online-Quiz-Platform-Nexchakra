@@ -30,12 +30,24 @@ async function readRawBody(req: NextApiRequest): Promise<Buffer> {
 }
 
 function getForwardedPath(req: NextApiRequest) {
-  const parts = Array.isArray(req.query.path) ? req.query.path : [];
+  const parts = Array.isArray(req.query.path)
+    ? req.query.path
+    : typeof req.query.path === "string"
+      ? [req.query.path]
+      : [];
+
   let joined = parts.map((p) => String(p)).filter(Boolean).join("/");
   if (!joined) {
     const nxtPpath = (req.query as any).nxtPpath;
     if (typeof nxtPpath === "string" && nxtPpath) joined = nxtPpath;
   }
+  if (!joined) {
+    const rawUrl = req.url || "";
+    const qIndex = rawUrl.indexOf("?");
+    const pathname = qIndex >= 0 ? rawUrl.slice(0, qIndex) : rawUrl;
+    joined = pathname.replace(/^\/api\/?/, "");
+  }
+
   return joined.replace(/^\/+/, "");
 }
 
@@ -61,6 +73,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const query = getForwardedQuery(req);
   const base = stripTrailingSlashes(target);
   const url = `${base}/api${forwardedPath ? `/${forwardedPath}` : ""}${query}`;
+
+  if (process.env.PROXY_DEBUG === "1") {
+    // eslint-disable-next-line no-console
+    console.log("[proxy]", req.method, req.url, "->", url);
+    res.setHeader("x-proxy-target", base);
+    res.setHeader("x-proxy-path", forwardedPath || "");
+    res.setHeader("x-proxy-url", url);
+  }
 
   const headers: Record<string, string> = {};
   for (const [key, value] of Object.entries(req.headers)) {
