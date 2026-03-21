@@ -35,14 +35,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(502).json({ error: "API_PROXY_TARGET_NOT_SET" });
   }
 
-  const pathParts = Array.isArray(req.query.path) ? req.query.path : [];
-  const path = pathParts.map((p) => encodeURIComponent(p)).join("/");
-  const queryIndex = req.url ? req.url.indexOf("?") : -1;
-  const query = queryIndex >= 0 && req.url ? req.url.slice(queryIndex) : "";
+  const rawUrl = req.url || "";
+  const qIndex = rawUrl.indexOf("?");
+  const pathname = qIndex >= 0 ? rawUrl.slice(0, qIndex) : rawUrl;
+  const rawQuery = qIndex >= 0 ? rawUrl.slice(qIndex + 1) : "";
+
+  const forwardedPath = pathname.replace(/^\/api\/?/, "").replace(/^\/+/, "");
+  const params = new URLSearchParams(rawQuery);
+  params.delete("path");
+  const query = params.toString();
 
   const base = stripTrailingSlashes(target);
-  const url = `${base}/api/${path}${query}`;
-
+  const url = `${base}/api${forwardedPath ? `/${forwardedPath}` : ""}${query ? `?${query}` : ""}`;
   const headers: Record<string, string> = {};
   for (const [key, value] of Object.entries(req.headers)) {
     const lower = key.toLowerCase();
