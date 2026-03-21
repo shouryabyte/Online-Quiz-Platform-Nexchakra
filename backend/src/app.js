@@ -1,8 +1,10 @@
-﻿import express from "express";
+import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+
+import { connectDb } from "./db/connect.js";
 
 import { env } from "./config/env.js";
 import { authRouter } from "./routes/auth.routes.js";
@@ -84,4 +86,17 @@ export function createApp() {
   return app;
 }
 
+const defaultApp = createApp();
 
+export default async function handler(req, res) {
+  try {
+    await connectDb(env.MONGODB_URI);
+    return defaultApp(req, res);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "SERVERLESS_INIT_FAILED" }));
+  }
+}
